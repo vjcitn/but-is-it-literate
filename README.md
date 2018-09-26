@@ -1,5 +1,7 @@
 # but-is-it-literate
 
+inspired by Y. Xie's [note on notebooks](https://yihui.name/en/2018/09/notebook-war/)
+
 ## historical reflection on the literature of literate statistical computing
 
 A [2001 paper in CHANCE](https://amstat.tandfonline.com/doi/abs/10.1080/09332480.2001.10542284#.W6uA-hNKh0s) described the use of
