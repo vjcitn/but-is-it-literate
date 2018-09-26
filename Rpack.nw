@@ -1,0 +1,321 @@
+@
+{\Huge \bf ``Literate'' R package example}
+
+\tableofcontents
+
+\section{Overview and package description}
+
+{\tt checkT} is an R package to facilitate
+examination the rejection rate
+of the $t$ test in various contexts.
+The formal description file follows:
+
+<<checkT/NAMESPACE>>=
+exportPattern("..*")
+@
+<<checkT/DESCRIPTION>>=
+Package: checkT
+Version: 0.02
+Date: 2001/03/25
+Title: T test Simulation Package
+Author: Vince Carey <stvjc@gauss.med.harvard.edu>
+Maintainer: Vince Carey <stvjc@channing.harvard.edu>
+Description: This library illustrates literate programming
+        in support of R package development; slightly modified in 2018
+License: GPL version 2
+URL: http://www.biostat.harvard.edu/~carey
+@
+\section{R code}
+@
+The overall architecture of the function is
+as follows:
+
+<<checkT/R/tsim.R>>=
+checkT <- function( <<args to t simulation>> )
+ {
+ <<body of t simulation>> 
+ }
+@
+\vspace*{-4mm}
+\noindent
+%The token
+%$\langle tsim.R \rangle \negthinspace\equiv$
+%denotes that our code will be
+%tangled to the file [[tsim.R]].
+%.Our function name is [[checkT]].  It may
+%have a long and distracting argument sequence, and
+%we defer listing this.
+% may want to comment how factoring away the arglist
+% helps future extensions
+%Instead, we give the title of a 
+%``code chunk'' that will later
+%be expanded: {\it args to t simulation}.
+% should comment that code chunks need not be
+% syntactically complete in any way (but tokens can't be split)
+%The body of the program may require a high-level
+%decomposition, and we defer discussing this as well.
+%Instead, let's discuss motivation and the
+%basic data objects to be manipulated.
+%We will use {\tt teletype} font
+%to denote program elements or programs.
+
+We want to
+estimate the probability that a $t$ test of
+a null hypothesis of a zero population mean
+rejects
+when applied to $N_{sim}$ replicates of $n$-samples from various distributional
+models of the population.
+We will obtain an $N_{sim}-$vector [[pvals]] of p-values from
+repeated application of the $t$ test to [[NSIM]] independent
+pseudorandom
+samples of size [[SSIZE]] from specified distributions.
+Let the value of [[signif]] be the nominal
+type I error rate of interest.  Then the
+following is what we ultimately want:
+
+<<return rejection rate>>= 
+ mean(pvals < signif)
+@
+\vspace*{-4mm}
+\noindent
+The ``mean'' of the above logical comparison vector
+is an estimate of the desired probability.
+The body of the simulation is aimed at creating the
+vector [[pvals]] and calculating this mean:
+
+<<body of t simulation>>=
+ <<initialize generator>>
+ <<allocate/populate storage with data>> 
+ <<iterate test>> 
+ <<return rejection rate>> 
+@
+\vspace*{-4mm}
+%Again our narrative does not need to follow the
+%sequence of computations required by R.
+%What is most interesting is to consider how
+The vector [[pvals]]
+is developed in the following code chunk named {\it iterate test}.
+Assuming that [[samp.mat]]
+is a matrix with [[NSIM]] rows and [[SSIZE]]
+columns, this row-based iteration
+yields the desired vector of test results:
+
+<<iterate test>>= 
+pvals <- apply(samp.mat, 2, function(x)
+    t.test(x)$p.value)
+@
+\vspace*{-4mm}
+\noindent
+The details of creating [[samp.mat]] involve
+the arguments to the function:
+
+<<args to t simulation>>=
+NSIM=100, SSIZE=25, prng=rnorm, par1=0, 
+    par2=1, signif=0.05, inseed=123
+@
+\noindent
+[[NSIM]] and [[SSIZE]] have already been
+described.  The [[prng]] argument is
+a PseudoRandomNumberGenerator function.
+It is assumed that there will be at most
+two parameters, to be given in [[par1]]
+and [[par2]].  (This design, in which
+the parameters to a function are factored
+away with no additional structure, is
+questionable.  Literate programming
+does not guarantee excellent code, but it does
+encourage the coder to discuss shortcomings
+and opportunities for improvement.
+The reader may consider it an exercise to flexibly
+supply generator parameter information
+for this function with, perhaps, various
+sorts of validity and compatibility checks.)
+Finally we specify the target significance
+level as [[signif]] and the generator
+seed as [[inseed]].
+
+The body of the function is completed by
+coding up two last chunks.  First, the
+creation of [[samp.mat]]
+is slightly complicated because
+we want to allow one- and two-parameter distributions.
+A simple branch on the existence of the second
+parameter will work but again this design
+can be improved.
+
+<<allocate/populate storage with data>>= 
+if (is.null(par2))
+  alldata <- prng(NSIM*SSIZE,par1)
+else
+  alldata <- prng(NSIM*SSIZE,par1,par2)
+samp.mat <- matrix(alldata,nr=SSIZE,nc=NSIM)
+
+@
+\noindent
+Finally we set the generator seed.
+<<initialize generator>>=
+set.seed(inseed)
+
+@
+\section{Self-application: an account of literate package development}
+
+One of the great virtues of the R statistical
+computing environment is the systematic approach
+to environment extension through user-contributed
+packages.  The URL
+{\tt http://cran.r-project.org/doc/manuals/R-exts.pdf}
+provides a full protocol for organizing contributed
+code to implement new statistical procedures in
+such a way that a user can install and test the new
+procedure with a single command.
+Currently the R package protocol requires the developer
+to provide a {\tt DESCRIPTION} file with a specific
+structure, and a number of directories that contain
+files for specific aspects of package implementation.
+These directories are {\tt R} (for R source),
+{\tt src} (for source code in other languages, typically
+C or Fortran), {\tt man} (for online documentation text,
+in a special format {\tt .Rd}), {\tt data} (for data
+files associated with the package) and {\tt tests}, which
+includes files coding testing exercises and outputs for
+validity comparisons.
+
+Although it was not necessarily conceived to allow this, literate
+programming methodology facilitates documented 
+coding of multidirectory packages of the kind required by R.
+The following ``code'' chunk is documentation marked up to be formatted
+by the R online doc processor.
+
+<<checkT/man/checkT.Rd>>=
+\name{checkT}
+\alias{checkT}
+%- Also NEED an `\alias' for EACH other topic documented here.
+\title{demonstrate literate implementation of t simulator}
+\description{
+simulates t test in various sampling settings, based in noweb
+for expository article for CHANCE
+}
+\usage{
+checkT(NSIM=100, SSIZE=25, prng=rnorm, par1=0, par2=1, signif=0.05, inseed=123)
+}
+%- maybe also `usage' for other objects documented here.
+\arguments{
+  \item{NSIM}{ number of realizations }
+  \item{SSIZE}{ sample size for each test }
+  \item{prng}{ R function that generates pseudorandom numbers }
+  \item{par1}{ first parameter of \code{prng}}
+  \item{par2}{ second parameter of \code{prng}, should be NULL for one-parameter generators }
+  \item{signif}{ significance threshold }
+  \item{inseed}{ generator seed }
+}
+\details{
+}
+\value{
+returns estimated rejection rate
+}
+\references{ http://www.biostat.harvard.edu/~carey/chancelit.html }
+\author{ VJ Carey }
+%\note{ ~~further notes~~ }
+
+% ~Make other sections like WARNING with \section{WARNING }{....} ~
+
+%\seealso{ ~~objects to SEE ALSO as \code{\link{~~fun~~}}, ~~~ }
+
+\examples{
+n25.1000 <- checkT(NSIM=1000)
+n250.1000 <- checkT(NSIM=1000, SSIZE=250)
+}
+\keyword{ literate programming, simulation }%-- one or more ...
+@
+\section{Administration}
+
+
+<<AdminMakefile>>=
+Rpack.tex: Rpack.nw
+	noweave -n -delay Rpack.nw > Rpack.tex
+
+Rpack.dvi: Rpack.tex
+	latex Rpack.tex
+
+Rpack.html: Rpack.nw
+	noweave -filter l2h -latex+html -index -html Rpack.nw |htmltoc> Rpack.html
+
+AdminMakefile: Rpack.nw
+	notangle -t8 -R"AdminMakefile" Rpack.nw > AdminMakefile
+	notangle -t8 -R"amake" Rpack.nw > amake
+	chmod +x amake
+
+redit:
+	vi Rpack.nw
+
+package:
+	-mkdir checkT
+	notangle -t8 -R"checkT/DESCRIPTION" Rpack.nw >> checkT/DESCRIPTION
+	notangle -t8 -R"checkT/NAMESPACE" Rpack.nw >> checkT/NAMESPACE
+	-mkdir checkT/man
+	notangle -t8 -R"checkT/man/checkT.Rd" Rpack.nw >> checkT/man/checkT.Rd
+	-mkdir checkT/R
+	notangle -t8 -R"checkT/R/tsim.R" Rpack.nw >> checkT/R/tsim.R
+	-mkdir checkT/data
+	-mkdir checkT/src
+	-mkdir checkT/tests
+	R CMD check checkT
+	
+
+<<amake>>=
+	make -f AdminMakefile $*
+
+@
+\begin{figure}
+
+<img src=revised.gif height=350>
+
+\caption{Schematic illustrating resources
+and transformations in literate programming.
+The {\tt webfile} is a structured collection
+of documentation, source, and resources
+for building and testing.  The resources
+are identified and distinguished using
+{\tt noweb} syntax, whose main elements
+are the at-sign and double angle-brackets.
+The {\tt weave} and {\tt tangle} transformation
+programs yield attractive documentation
+and runnable program source.}
+\label{schematic}
+\end{figure}
+
+\begin{figure}
+\begin{verbatim}
+checkT <- function( NSIM=100, SSIZE=25, prng=rnorm, par1=0, 
+                        par2=1, signif=0.05, inseed=123 )
+ {
+  set.seed(inseed)
+  if (is.null(par2))
+    alldata <- prng(NSIM*SSIZE,par1)
+  else
+    alldata <- prng(NSIM*SSIZE,par1,par2)
+  samp.mat <- matrix(alldata,nr=SSIZE,nc=NSIM)
+ 
+  pvals <- apply(samp.mat, 2, function(x)
+      t.test(x)$p.value) 
+   mean(pvals < signif)  
+ }
+\end{verbatim}
+\caption{The exact output of {\tt notangle -R"tsim.R"} applied
+to the {\tt .nw} file defining this article.}
+\label{notanout}
+\end{figure}
+
+\begin{figure}
+XXX
+\caption{Extract from the {\tt noweb}
+code that creates the beginning of section
+\ref{insec} of this paper.  This
+particular segment assumes that \LaTeX\ is
+the documentation markup, but this
+is inessential.}
+\label{markeg}
+\end{figure}
+
+
+\end{document}
